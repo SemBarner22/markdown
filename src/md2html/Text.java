@@ -1,8 +1,5 @@
 package md2html;
 
-import md2html.ExceptionParser;
-import md2html.Source;
-
 import java.io.FileInputStream;
 import java.lang.*;
 

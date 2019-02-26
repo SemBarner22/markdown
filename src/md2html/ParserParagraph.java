@@ -27,11 +27,12 @@ public class ParserParagraph {
                 strings.add(source.readLine());
             }
             i = 0;
+            now = 0;
             parseHead(strings);
         }
     }
 
-    private int now = 0;
+    private int now;
 
 
     private boolean boldStar;
@@ -40,8 +41,6 @@ public class ParserParagraph {
     private boolean code;
     private boolean mark;
     private boolean under;
-    private boolean picture;
-    private boolean sourc;
     private boolean strikethrough;
     private boolean opened;
     private StringBuilder http = new StringBuilder();
@@ -79,23 +78,12 @@ public class ParserParagraph {
         while (i < strs.size()) {
             String s = strs.get(i);
             while (now < s.length() && s.charAt(now) != '\r' && s.charAt(now) != '\n') {
-                if (picture && s.charAt(now) != ']') {
-                    str.append(s.charAt(now));
-                    now++;
-                    continue;
-                }
                 if (s.charAt(now) == '*') {
                     if (!opened) {
                         str.append(testBold1(s));
                     } else {
                         http.append(testBold1(s));
                     }
-                    continue;
-                }
-                if (!opened && s.charAt(now) == '!' && now < s.length() - 1 && s.charAt(now + 1) == '[') {
-                    picture = true;
-                    now++;
-                    str.append(testOpenBrace(s));
                     continue;
                 }
                 if (s.charAt(now) == '_') {
@@ -138,15 +126,16 @@ public class ParserParagraph {
                     }
                     continue;
                 }
+                if (s.charAt(now) == '!' && now < s.length() && s.charAt(now + 1) == '[') {
+                    str.append(testPict(strs));
+                    s = strs.get(i);
+                    continue;
+                }
                 if (s.charAt(now) == '(') {
                     if (now > 0 && s.charAt(now - 1) == ']') {
-                        if (sourc) {
-                            str.append(testPict(strs));
-                            continue;
-                        } else {
-                            str.append(testHttp(strs));
-                            continue;
-                        }
+                        str.append(testHttp(strs));
+                        s = strs.get(i);
+                        continue;
                     } else {
                         str.append('(');
                         now++;
@@ -159,12 +148,7 @@ public class ParserParagraph {
                     continue;
                 }
                 if (s.charAt(now) == ']') {
-                    if (picture) {
-                        str.append(testPicture(s));
-                        sourc = true;
-                    }
                     opened = false;
-                    picture = false;
                     now++;
                 } else {
                     if (!opened) {
@@ -187,10 +171,6 @@ public class ParserParagraph {
         out.print(str.toString());
     }
 
-    private String testPicture(String s) {
-        return "' src='";
-    }
-
     private String testMark(String s) {
         now++;
         mark = !mark;
@@ -203,13 +183,20 @@ public class ParserParagraph {
 
     private String testPict(ArrayList<String> strin) {
         StringBuilder str = new StringBuilder();
-        now++;
+        now += 2;
+        str.append("<img alt='");
         while (i < strin.size() && now < strin.get(i).length() && strin.get(i).charAt(now) != ')') {
+            if (strin.get(i).charAt(now) == ']') {
+                now += 2;
+                str.append("' src='");
+                continue;
+            }
             str.append(strin.get(i).charAt(now));
             now++;
             if (now == strin.get(i).length()) {
-                i++;
                 now = 0;
+                i++;
+                str.append('\n');
             }
         }
         now++;
@@ -226,6 +213,7 @@ public class ParserParagraph {
             if (now == strin.get(i).length()) {
                 i++;
                 now = 0;
+                str.append('\n');
             }
         }
         now++;
@@ -236,11 +224,7 @@ public class ParserParagraph {
 
     private String testOpenBrace(String s) {
         StringBuilder str = new StringBuilder();
-        if (!picture) {
-            str.append("<a href='");
-        } else {
-            str.append("<img alt='");
-        }
+        str.append("<a href='");
         now++;
         return str.toString();
     }
